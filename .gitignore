@@ -1,0 +1,13 @@
+*.pdf
+*.aux
+*.bbl
+*.bib
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+.venv
+.DS_Store
+.idea

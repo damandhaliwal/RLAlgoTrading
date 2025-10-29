@@ -1,0 +1,41 @@
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{natbib}
+\usepackage{hyperref}
+\usepackage{titling}
+\usepackage[left=0.8in,right=0.8in,bottom=1in]{geometry}
+\usepackage{setspace}
+
+\setlength{\droptitle}{-8em}
+\setstretch{1.2}
+
+\title{Reinforcement Learning in Finance: Brainstorming One-Pager for ECO 2905}
+\author{Damanveer Singh Dhaliwal}
+\date{\today}
+
+\begin{document}
+\maketitle
+\vspace{-2em}
+\section{Problem Space}
+\vspace{-0.25cm}
+Reinforcement Learning (RL) was created to make sequential decisions under uncertainty by the algorithm learning from its experience in the environment based on its actions. The model rewards the agent for the action and the objective for the agent is to maximize its expected future reward.
+\\
+In the financial world, RL is being used to optimize algorithmic trading decisions. Under options trading, traders often have to hedge their investments based on the implied volatility or pricing of these derivatives (that fluctuates consistently). Traditionally, these hedging decisions are based on the underlying option (call/put) that is being hedged and ignore the underlying pricing information that may be reflected in the pricing decisions of other options.
+\\
+The derivatives hedging literature has already explored the use of Reinforcement Learning to optimize hedging decisions by extending the logic used in traditional strategies (\cite{buehler_deep_2018}).
+\\
+\cite{francois2025enhancing} extended this literature by using the cross-sectional information from an Implied Volatility Surface (IVS) to hedge options. The IVS is a surface that reflects the implied volatility of options across different exercise prices and maturities. Their paper showed that this technique improved returns significantly over traditional methods. However, it uses only the current surface as input to the RL agent, without predicting how the surface will evolve.
+
+\vspace{-1em}
+
+\section{Proposed Research Idea}
+\vspace{-0.25cm}
+The proposed research idea is to extend the work of \cite{francois2025enhancing} by predicting the implied volatility surface using machine learning techniques (even if it is for the next 2-3 days) and then train the RL agent to incorporate this additional information and compare returns to traditional methods.
+\\ Most of the data required for this project is publicly available or should be accessible through the university's subscription to the Bloomberg Terminal and Wharton Research Data Services. Relevant papers are cited below.
+\vspace{-1em}
+
+\bibliographystyle{chicago}
+\bibliography{one_pager}
+
+\end{document}
