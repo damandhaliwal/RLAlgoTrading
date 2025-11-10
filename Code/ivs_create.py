@@ -4,10 +4,8 @@ import numpy as np
 import os
 from utils import paths, load_data
 
-path = paths()
-
-# main body to create ivs - will convert to function later
 def create_ivs(overwrite = False):
+    path = paths()
     filepath = path['data'] + 'ivs.npy'
 
     if not overwrite and os.path.exists(filepath):
