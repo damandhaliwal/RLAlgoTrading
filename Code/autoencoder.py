@@ -12,9 +12,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 
-def train_autoencoder():
+def train_autoencoder(overwrite = False):
     # load ivs
-    data = create_ivs(overwrite=False)
+    data = create_ivs(overwrite = overwrite)
     data = data.reshape((data.shape[0], -1))
 
     # split into train and test dataset
