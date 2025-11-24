@@ -10,11 +10,11 @@ from torch.utils.data import TensorDataset, DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import pickle
 
-
-def train_autoencoder(overwrite = False):
+def train_autoencoder(overwrite = False, epochs = 100):
     # load ivs
-    data = create_ivs(overwrite = overwrite)
+    data, _ = create_ivs(overwrite = overwrite)
     data = data.reshape((data.shape[0], -1))
 
     # split into train and test dataset
@@ -78,7 +78,7 @@ def train_autoencoder(overwrite = False):
     model = Autoencoder(input_dim=input_dim, latent_dim=24)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-    n_epochs = 100
+    n_epochs = epochs
 
     for epoch in range(n_epochs):
         model.train()
@@ -114,5 +114,17 @@ def train_autoencoder(overwrite = False):
     avg_test_loss = total_test_loss / num_batches
     print(f"Average Test Loss: {avg_test_loss}")
 
+    # save the model
+    path = paths()
+    models_dir = path['models']
+    os.makedirs(models_dir, exist_ok=True)
+
+    torch.save(model.state_dict(), os.path.join(models_dir, 'autoencoder.pth'))
+    with open(os.path.join(models_dir, 'autoencoder_scaler.pkl'), 'wb') as f:
+        pickle.dump(scaler, f)
+
+    print(f"Model saved to {models_dir}")
+
     return model, scaler
 
+train_autoencoder(overwrite = True, epochs = 100000)

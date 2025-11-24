@@ -10,13 +10,15 @@ def paths():
     data_output_dir = os.path.join(parent_dir, 'Output', 'Data/')
     plots_dir = os.path.join(parent_dir, 'Output', 'Plots/')
     tables_dir = os.path.join(parent_dir, 'Output', 'Tables/')
+    models_dir = os.path.join(parent_dir, 'Output', 'Models/')
 
     return {
         'parent_dir': parent_dir,
         'data_input': data_dir,
         'data': data_output_dir,
         'plots': plots_dir,
-        'tables': tables_dir
+        'tables': tables_dir,
+        'models': models_dir
     }
 
 # load and clean data
@@ -30,6 +32,7 @@ def load_data():
 
     # keep SPY only
     data = data[data['ticker'] == 'SPY']
+    data['is_put'] = (data['cp_flag'] == 'P').astype(int)
 
     # save the data as csv
     data.to_csv(path['data'] + 'data_clean_SPY.csv', index=False)
