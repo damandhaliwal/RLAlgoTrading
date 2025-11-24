@@ -12,9 +12,6 @@ from spy_prices import get_spy_prices
 from utils import paths
 
 
-# ---------------------------------------------------------
-# 1. Financial Helpers (Black-Scholes)
-# ---------------------------------------------------------
 def bs_price(S, K, T, r, sigma, is_put=True):
     """Calculates Black-Scholes price to initialize portfolio wealth."""
     # Avoid div by zero
@@ -29,9 +26,6 @@ def bs_price(S, K, T, r, sigma, is_put=True):
     return price
 
 
-# ---------------------------------------------------------
-# 2. Market Environment (Handles Data Bootstrapping)
-# ---------------------------------------------------------
 class MarketEnvironment:
     def __init__(self, prices, latents, n_days=64):
         self.prices = prices
@@ -55,10 +49,6 @@ class MarketEnvironment:
         return (torch.tensor(np.array(batch_prices), dtype=torch.float32).unsqueeze(-1),
                 torch.tensor(np.array(batch_latents), dtype=torch.float32))
 
-
-# ---------------------------------------------------------
-# 3. Deep Agent (With Leverage & Memory)
-# ---------------------------------------------------------
 class DeepAgent(nn.Module):
     def __init__(self, network, state_dim, hidden_dim, num_layers, dropout_par, nbs_assets=1, max_borrow=100.0):
         super(DeepAgent, self).__init__()
@@ -125,9 +115,6 @@ class DeepAgent(nn.Module):
         return raw_action, new_hidden
 
 
-# ---------------------------------------------------------
-# 4. Helpers
-# ---------------------------------------------------------
 def compute_loss(hedging_error, loss_type='MSE', alpha=0.95):
     if loss_type == 'MSE':
         return torch.mean(hedging_error ** 2)
@@ -140,9 +127,6 @@ def compute_loss(hedging_error, loss_type='MSE', alpha=0.95):
     return torch.mean(hedging_error ** 2)
 
 
-# ---------------------------------------------------------
-# 5. Main Training Loop
-# ---------------------------------------------------------
 def train_hedging_agent(
         network='RNNFNN',
         hidden_dim=56,
@@ -164,12 +148,9 @@ def train_hedging_agent(
         ivs_overwrite=False,
         test_split=0.2
 ):
-    print(f"--- Starting Training ---\nMode: {'Hybrid (Predictor)' if use_predictor else 'End-to-End (Novelty)'}")
-
-    # 1. Load Models & Data
+    # Load Models & Data
     predictor = None
     if use_predictor:
-        print("Loading LSTM Predictor...")
         predictor, scaler_pred, autoencoder = train_predictor(
             autoencoder=use_autoencoder, load_autoencoder=load_autoencoder, n_epochs=0
         )
@@ -211,8 +192,6 @@ def train_hedging_agent(
     prices = merged_df['spy_price'].values
     valid_indices = merged_df['latent_idx'].values
     latents_encoded = latents_encoded[valid_indices]
-
-    print(f"Aligned Data: {len(prices)} common days found.")
 
     # --- TRAIN / TEST SPLIT ---
     split_idx = int(len(prices) * (1 - test_split))
@@ -323,17 +302,13 @@ def train_hedging_agent(
         if epoch % 10 == 0:
             print(f"Epoch {epoch} | Train Loss ({loss_type}): {np.mean(epoch_losses):.6f}")
 
-    # --- Evaluation Loop ---
-    print("\n--- Running Evaluation on Unseen Test Data ---")
     model.eval()
     test_losses = []
 
     with torch.no_grad():
         for _ in range(100):
-            # USE TEST ENV
             b_prices, b_latents = test_env.get_batch_data(batch_size)
 
-            # --- NORMALIZATION ---
             initial_prices = b_prices[:, 0, 0].unsqueeze(1)
             scale_factors = 100.0 / initial_prices
             norm_prices = b_prices * scale_factors.unsqueeze(1)
@@ -391,7 +366,6 @@ def train_hedging_agent(
 
 if __name__ == "__main__":
     # Experiment 1: Novelty (End-to-End)
-    print(">>> Running Experiment 1: End-to-End (Novelty) <<<")
     model_e2e = train_hedging_agent(
         network='RNNFNN',
         n_epochs=50,
@@ -400,8 +374,6 @@ if __name__ == "__main__":
     )
 
     # Experiment 2: Comparison (Hybrid)
-    # Uncomment below to run
-    print("\n>>> Running Experiment 2: Hybrid (Comparison) <<<")
     model_hybrid = train_hedging_agent(
          network='RNNFNN',
          n_epochs=50,
