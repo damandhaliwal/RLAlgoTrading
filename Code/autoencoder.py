@@ -12,6 +12,39 @@ import torch.nn.functional as F
 import torch.optim as optim
 import pickle
 
+# define the autoencoder class - useful for accessing the hidden layers that will be useful for RL later
+class Autoencoder(nn.Module):
+    def __init__(self, input_dim, latent_dim=32):
+        super(Autoencoder, self).__init__()
+
+        # Encoder
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, latent_dim)
+        )
+
+        # Decoder
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, input_dim)
+        )
+
+    def forward(self, x):
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+        return encoded, decoded
+
+
 def train_autoencoder(overwrite = False, epochs = 100):
     # load ivs
     data, _ = create_ivs(overwrite = overwrite)
@@ -41,41 +74,9 @@ def train_autoencoder(overwrite = False, epochs = 100):
     # Get the number of features for the input layer
     input_dim = train_tensor.shape[1]
 
-    # define the autoencoder class - useful for accessing the hidden layers that will be useful for RL later
-    class Autoencoder(nn.Module):
-        def __init__(self, input_dim, latent_dim=16):
-            super(Autoencoder, self).__init__()
-
-            # Encoder
-            self.encoder = nn.Sequential(
-                nn.Linear(input_dim, 128),
-                nn.ReLU(),
-                nn.Dropout(0.2),
-                nn.Linear(128, 64),
-                nn.ReLU(),
-                nn.Dropout(0.2),
-                nn.Linear(64, latent_dim)
-            )
-
-            # Decoder
-            self.decoder = nn.Sequential(
-                nn.Linear(latent_dim, 64),
-                nn.ReLU(),
-                nn.Dropout(0.2),
-                nn.Linear(64, 128),
-                nn.ReLU(),
-                nn.Dropout(0.2),
-                nn.Linear(128, input_dim)
-            )
-
-        def forward(self, x):
-            encoded = self.encoder(x)
-            decoded = self.decoder(encoded)
-            return encoded, decoded
-
     # training loop
     loss = nn.MSELoss()
-    model = Autoencoder(input_dim=input_dim, latent_dim=24)
+    model = Autoencoder(input_dim=input_dim, latent_dim=32)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     n_epochs = epochs
@@ -126,5 +127,3 @@ def train_autoencoder(overwrite = False, epochs = 100):
     print(f"Model saved to {models_dir}")
 
     return model, scaler
-
-train_autoencoder(overwrite = True, epochs = 100000)

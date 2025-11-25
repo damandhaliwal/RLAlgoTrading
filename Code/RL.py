@@ -368,7 +368,7 @@ if __name__ == "__main__":
     # Experiment 1: Novelty (End-to-End)
     model_e2e = train_hedging_agent(
         network='RNNFNN',
-        n_epochs=50,
+        n_epochs=100,
         use_predictor=False,
         loss_type='MSE'
     )
@@ -376,7 +376,7 @@ if __name__ == "__main__":
     # Experiment 2: Comparison (Hybrid)
     model_hybrid = train_hedging_agent(
          network='RNNFNN',
-         n_epochs=50,
+         n_epochs=100,
          use_predictor=True,
          loss_type='MSE'
      )
