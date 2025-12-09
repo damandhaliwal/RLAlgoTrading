@@ -1,5 +1,8 @@
+# Get SPY prices from Yahoo Finance
+# Daman Dhaliwal
+
+# import libraries
 import yfinance as yf
-import pandas as pd
 from utils import paths
 import os
 

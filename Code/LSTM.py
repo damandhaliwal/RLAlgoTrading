@@ -1,5 +1,7 @@
-import pandas as pd
-import numpy as np
+# LSTM Predictor
+# Daman Dhaliwal
+
+# import libraries
 import os
 import pickle
 
@@ -15,8 +17,6 @@ import torch.optim as optim
 
 
 class IVS_Predictor(nn.Module):
-    """LSTM predictor for IVS sequences."""
-
     def __init__(self, input_dim, hidden_dim, num_layers):
         super(IVS_Predictor, self).__init__()
 
@@ -43,7 +43,6 @@ class IVS_Predictor(nn.Module):
 
 
 def _load_autoencoder():
-    """Load pretrained autoencoder and scaler."""
     path_dict = paths()
     models_dir = path_dict['models']
 
@@ -61,7 +60,6 @@ def _load_autoencoder():
 
 
 def create_sequences(data, sequence_length):
-    """Create input/output sequences for LSTM training."""
     num_sequences = len(data) - sequence_length
     feature_dim = data.shape[1]
 
@@ -84,25 +82,10 @@ def train_predictor(
         autoencoder=True,
         load_autoencoder=True
 ):
-    """
-    Train LSTM predictor for IVS forecasting.
-
-    Args:
-        autoencoder: If True, predict in latent space (24-dim).
-                     If False, predict full surface (374-dim).
-        load_autoencoder: If True, load pretrained autoencoder.
-        n_epochs: If 0, just load existing model without training.
-
-    Returns:
-        predictor: Trained LSTM model
-        scaler: Scaler used for data normalization
-        ae_model: Autoencoder model (or None if autoencoder=False)
-    """
     path_dict = paths()
     models_dir = path_dict['models']
     os.makedirs(models_dir, exist_ok=True)
 
-    # Keep original naming convention
     if autoencoder:
         model_name = 'lstm_predictor_ae.pth'
         scaler_name = 'lstm_predictor_scaler_ae.pkl'
@@ -136,7 +119,6 @@ def train_predictor(
     print(f"Predictor mode: {mode_str}")
     print(f"Input dimension: {input_dim}")
 
-    # === If n_epochs=0, just load existing model ===
     if n_epochs == 0:
         model_path = os.path.join(models_dir, model_name)
         scaler_path = os.path.join(models_dir, scaler_name)
@@ -159,7 +141,6 @@ def train_predictor(
         else:
             raise FileNotFoundError(f"Model not found: {model_path}")
 
-    # === Create sequences ===
     X, y = create_sequences(predictor_data, sequence_length)
 
     split_idx = int(0.8 * len(X))
@@ -185,12 +166,12 @@ def train_predictor(
         batch_size=batch_size, shuffle=False
     )
 
-    # === Initialize model ===
+    # initialize model and optimizer
     predictor = IVS_Predictor(input_dim, hidden_dim, num_layers)
     optimizer = optim.Adam(predictor.parameters(), lr=0.001)
     loss_fn = nn.MSELoss()
 
-    # === Training loop ===
+    # training loop
     for epoch in range(n_epochs):
         predictor.train()
         train_losses = []
@@ -233,18 +214,7 @@ def train_predictor(
 
 
 def train_both_predictors(n_epochs=200):
-    """Train both latent and full surface predictors."""
-
-    print("\n" + "=" * 60)
-    print("Training LATENT predictor (32-dim)")
-    print("=" * 60)
-
     train_predictor(n_epochs=n_epochs, autoencoder=True, load_autoencoder=True)
-
-    print("\n" + "=" * 60)
-    print("Training FULL SURFACE predictor (374-dim)")
-    print("=" * 60)
-
     train_predictor(n_epochs=n_epochs, autoencoder=False)
 
 

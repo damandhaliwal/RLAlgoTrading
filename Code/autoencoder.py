@@ -1,6 +1,7 @@
+# Autoencoder definition
+# Daman Dhaliwal
+
 # import libraries
-import pandas as pd
-import numpy as np
 import os
 from ivs_create import create_ivs
 from utils import paths
@@ -8,7 +9,6 @@ from sklearn.preprocessing import StandardScaler
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 import pickle
 

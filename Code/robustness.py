@@ -1,9 +1,11 @@
+# Robustness Check
+# Daman Dhaliwal
+
+# import libraries
 import torch
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import os
-from scipy.stats import norm
 
 from RL import DeepAgent, MarketEnvironment, bs_price, compute_loss
 from ivs_create import create_ivs
@@ -12,9 +14,6 @@ from LSTM import train_predictor
 from utils import paths
 
 def detect_regimes(prices, n_days=63):
-    """
-    Classifies every possible start date in history into a market regime.
-    """
     n_samples = len(prices) - n_days
     regime_indices = {
         'Normal': [],
@@ -58,8 +57,6 @@ def detect_regimes(prices, n_days=63):
 
 
 def run_robustness_check(model_path, network='RNNFNN', use_predictor=False):
-    print("Loading Data...")
-
     predictor = None
     if use_predictor:
         predictor, scaler_pred, autoencoder = train_predictor(n_epochs=0, load_autoencoder=True)
@@ -97,15 +94,12 @@ def run_robustness_check(model_path, network='RNNFNN', use_predictor=False):
     model.load_state_dict(torch.load(model_path))
     model.eval()
 
-    print("\nClassifying Historical Market Regimes...")
     regimes = detect_regimes(prices, n_days=nbs_point_traj)
 
     results = {}
 
     for regime_name, indices in regimes.items():
         if len(indices) == 0: continue
-
-        print(f"\n--- Testing on {regime_name} Market ({len(indices)} episodes) ---")
 
         # Bootstrapping logic for evaluation
         n_evals = 500
@@ -123,7 +117,7 @@ def run_robustness_check(model_path, network='RNNFNN', use_predictor=False):
         b_prices = torch.tensor(np.array(batch_prices), dtype=torch.float32).unsqueeze(-1)
         b_latents = torch.tensor(np.array(batch_latents), dtype=torch.float32)
 
-        # --- NORMALIZATION (MUST MATCH TRAINING) ---
+        # Normalization
         initial_prices = b_prices[:, 0, 0].unsqueeze(1)
         scale_factors = 100.0 / initial_prices
         norm_prices = b_prices * scale_factors.unsqueeze(1)
@@ -170,14 +164,11 @@ def run_robustness_check(model_path, network='RNNFNN', use_predictor=False):
 
 
 if __name__ == "__main__":
-    # Locate the model file correctly using utils.paths()
     path_dict = paths()
     model_filename = 'agent_RNNFNN_hybrid.pth'  # Use 'agent_RNNFNN_hybrid.pth' for Experiment 2
 
-    # Construct absolute path
     full_model_path = os.path.join(path_dict['models'], model_filename)
 
-    # Check if file exists before running
     if not os.path.exists(full_model_path):
         print(f"ERROR: Model file not found at {full_model_path}")
         print("Did you run RL.py first?")
