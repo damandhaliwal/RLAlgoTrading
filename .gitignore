@@ -17,3 +17,4 @@ one_pager.tex
 *.pth
 *.pkl
 *.png
+*.pyc

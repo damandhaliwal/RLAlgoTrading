@@ -1,0 +1,17 @@
+\begin{table}[H]
+\caption{Comparative Hedging Performance (MSE \& RMSE) across 63-day Test Horizon}
+\label{tab:hedging_results}
+\resizebox{\linewidth}{!}{
+\begin{tabular}{l|rrr|rrr}
+\toprule
+Strategy & Put MSE & Put RMSE & Put Imp (\%) & Call MSE & Call RMSE & Call Imp (\%) \\
+\midrule
+BS Delta (Baseline) & 9.0402 & 3.0067 & 0.0000 & 9.5158 & 3.0848 & 0.0000 \\
+RL-Latent (No Pred) & 4.8462 & 2.2014 & 46.3932 & 7.6199 & 2.7604 & 19.9239 \\
+RL-Latent (Pred) & 4.9841 & 2.2325 & 44.8673 & 11.3206 & 3.3646 & -18.9665 \\
+RL-Full (No Pred) & 5.5338 & 2.3524 & 38.7873 & 9.8034 & 3.1310 & -3.0224 \\
+RL-Full (Pred) & 7.7873 & 2.7906 & 13.8593 & 9.4257 & 3.0701 & 0.9465 \\
+RL-Hybrid (Proposed) & 5.9724 & 2.4439 & 33.9350 & 10.3482 & 3.2169 & -8.7471 \\
+\bottomrule
+\end{tabular}}
+\end{table}

@@ -9,6 +9,7 @@
 \usepackage{amsmath, amssymb}
 \usepackage{float}
 \usepackage{tikz}
+\usepackage{booktabs}
 \usetikzlibrary{positioning}
 
 \setstretch{1.2}
@@ -29,7 +30,7 @@ Recent advancements in machine learning, particularly deep reinforcement learnin
 
 Notably, \citet{buehler_deep_2018} pioneered showed the potential for deep hedging using RL and its potential to outperform traditional hedging strategies. \cite{francois2025enhancing} further demonstrate that deep hedging can significantly outperform classical methods, especially in markets characterized by frictions such as transaction costs and liquidity constraints. 
 
-However, a notable limitation in the existing literature is the reliance on simulated market data generated from parametric stochastic volatility models such as the Heston or SABR [CITE]. While these models caputre certain parameters of the options markets, such as the volatility smiles and mean-reverting variances, they often fail to fully encapsulate the complexities and nuances of real-world market dynamics given their parametric nature. Activity such as regime shifts, liquidity crises, and market microstructures are very difficult to model accurately using these parametric frameworks.
+However, a notable limitation in the existing literature is the reliance on simulated market data generated from parametric stochastic volatility models such as the Heston or SABR (\cite{heston_closed-form_1993}). While these models caputre certain parameters of the options markets, such as the volatility smiles and mean-reverting variances, they often fail to fully encapsulate the complexities and nuances of real-world market dynamics given their parametric nature. Activity such as regime shifts, liquidity crises, and market microstructures are very difficult to model accurately using these parametric frameworks.
 
 To address these limitations, this paper proposes a novel approach to train deep hedging agents on real market data. Specifically, we use SPY options from 2011 to 2023, obtained from the WRDS OptionMetrics database. The intention is to allow the DRL agent to access the same information availabe to human traders: the full structure of the volatility surface across strikes and maturities. 
 
@@ -190,6 +191,26 @@ While the RMSE values are not directly comparable due to the differing feature s
 To evaluate the performance of the reinforcement learning hedging agent, we compare its hedging error against a classical delta hedging benchmark derived from the Black-Scholes-Merton model. The hedging error is calculated as the difference between the option payoff and the portfolio value at maturity, with lower values indicating better hedging performance. 
 
 We also compare the performance of agents using different state representations and predictors. The results are summarized in the table below:
+\input{../Output/Tables/hedging_results.tex}
+These results clearly indicate that the RL framework consistently outperforms the Black-Scholes delta baseline for put options across all architectures, improving MSE by 33\% to 46\%. For call options, the results are mixed, with only the latent model without the predictions agent providing a substantial improvement over the baseline. 
+
+We believe that the superior performance on put options is due to the volatility skew inherent in the equity index markets. The Black-Scholes model assumes constant volatility surface and thereby fails to capture any increase or decrease for any puts that command higher volatilities. For call options, the volatility surface is usually flatter and is closer to the Black-Scholes assumption of constant volatility, making the baseline more difficult to surpass. 
+
+It should also be noted that the inclusion of an explicit volatility forecast did not consistently improve performance over the latent agent. This suggests that the latent representation of the volatility surface likely encodes sufficient information for optimal hedging, and the explicit forecast introduces prediction noise that degrades the performance of the reinforcement learning agent. 
+
+
+\subsection{Robustness Checks with Synthetic Data}
+To further validate the findings from our agent performance, we conduct robustness checks using synthetic data. Two sets of robustness checks were conducted:
+
+The first one studied the performance of agents (that were trained on real data) on synthetic data that modeled four different market dynamics: a bull market, a bear market, and a crash and boom scenario. Synthetic data was generated using the geometric Brownian motion to model specific trends and risk levels associated with regimes that have been described before. 
+
+To preserve realistic market structures, the corresponding implied volatility inputs were not generated synthetically. Instead, we employed a historical matching technique that assigned a real-world volatility surface sampled from the historical date with matching volatility characteristics to each synthetic regime. This approach allowed for controlled stress testing against hypothetical price movements while ensuring that the agent interacts with a valid complex volatility surface that contains all the information that a real one would. Results from this experiment are summarized in the table below:
+\input{../Output/Tables/synthetic_robustness.tex}
+
+Given that the agents were trained on real market data, it is unsurprising that they perform well in the bull and boom regimes where market conditions are more stable and align with historical patterns. However, their performance degrades significantly in the bear and crash scenarios, where the market experiences sharp declines and heightened volatility. This suggests that while the agents have learned effective hedging strategies for typical market conditions, they struggle to adapt to extreme downturns that may not be well-represented in the training data.
+
+To further investigate this, we conducted a second robustness check where the models were retrained entirely on synthetic data. Unlike the previous robustness check where constant volatility was assumed, this environment modeled volatility as a mean-reverting process with a negative 0.7 correlation to asset returns, capturing the leverage effect observed in real markets. Using this, we generated a 10-year synthetic dataset for the asset prices that was calibrated to match historical statistics. The synthetic implied volatility surfaces were constructed dynamically at each time step using the same approach as our real data, ensuring that the agent had access to realistic volatility information. The results from this experiment are summarized in the table below:
+
 
 
 \section{Conclusion}
