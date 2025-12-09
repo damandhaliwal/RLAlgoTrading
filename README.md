@@ -70,37 +70,13 @@ To validate the strategy for real-world deployment, the agent was stress-tested 
     pip install torch pandas numpy scipy scikit-learn matplotlib yfinance
     ```
 
-2.  **Data Pipeline:**
-    Ingest SPY data and construct the volatility surfaces.
+2.  **Reproduce All Results:**
+    Run the master script to generate all figures (Autoencoder/LSTM plots) and tables (Hedging Performance, Robustness) presented in the paper.
 
     ```bash
-    python Code/spy_prices.py
-    python Code/ivs_create.py
+    python Code/main.py
     ```
 
-3.  **Pre-training:**
-    Train the Autoencoder and LSTM Predictor to learn market dynamics.
-
-    ```bash
-    python Code/autoencoder.py
-    python Code/LSTM.py
-    ```
-
-4.  **Agent Training:**
-    Train the Hedging Agent. Use `use_predictor=True` to enable the forecasting module.
-
-    ```python
-    # Inside Code/RL.py
-    train_hedging_agent(network='RNNFNN', use_predictor=True)
-    ```
-
-5.  **Robustness Check:**
-    Evaluate the trained model across different market regimes.
-
-    ```bash
-    python Code/robustness.py
-    ```
-
------
+    *Note: This script orchestrates the entire pipeline, including data visualization, model evaluation, and synthetic robustness checks. Output artifacts will be saved to the `Output/` directory.*
 
 *Author: Damanveer Singh Dhaliwal*
