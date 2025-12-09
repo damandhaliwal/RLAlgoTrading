@@ -6,7 +6,7 @@ import os
 import pickle
 
 from ivs_create import create_ivs
-from utils import paths
+from utils import paths, load_data
 from autoencoder import Autoencoder
 
 from sklearn.preprocessing import StandardScaler
@@ -14,6 +14,10 @@ import torch
 from torch.utils.data import TensorDataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib import cm
+import pandas as pd
 
 
 class IVS_Predictor(nn.Module):
@@ -218,5 +222,166 @@ def train_both_predictors(n_epochs=200):
     train_predictor(n_epochs=n_epochs, autoencoder=False)
 
 
+# present results
+def lstm_results_full(sample_idx = 10):
+    path_dict = paths()
+
+    # Load Data & Predictor
+    data, dates = create_ivs(overwrite=False)
+    data_flat = data.reshape((data.shape[0], -1))
+
+    predictor, scaler, _ = train_predictor(n_epochs=0, autoencoder=False)
+    predictor.eval()
+
+    data_scaled = scaler.transform(data_flat)
+    sequence_length = 5
+    X, y = create_sequences(data_scaled, sequence_length)
+
+    split_idx = int(0.8 * len(X))
+    X_test = X[split_idx:]
+    y_test = y[split_idx:]
+    test_dates = dates[sequence_length:][split_idx:]
+
+    # Predict & Unscale
+    inputs = torch.tensor(X_test, dtype=torch.float32)
+    targets_scaled = torch.tensor(y_test, dtype=torch.float32)
+
+    with torch.no_grad():
+        preds_scaled = predictor(inputs)
+
+    preds_real = scaler.inverse_transform(preds_scaled.numpy())
+    actuals_real = scaler.inverse_transform(targets_scaled.numpy())
+
+    # Calculate Metrics
+    mse_real = np.mean((preds_real - actuals_real) ** 2)
+    rmse_real = np.sqrt(mse_real)
+
+    naive_preds = actuals_real[:-1]
+    naive_targets = actuals_real[1:]
+    naive_rmse = np.sqrt(np.mean((naive_preds - naive_targets) ** 2))
+
+    # Get Real Axis Labels
+    df = load_data()
+    df = df[(((df['delta'] < 0) & (df['cp_flag'] == "P")) |
+             ((df['delta'] > 0) & (df['cp_flag'] == "C")))]
+    completeness = df.groupby('date').size()
+    valid_dates = completeness[completeness == 374].index
+    df = df[df['date'].isin(valid_dates)]
+
+    unique_deltas = sorted(df['delta'].unique())
+    unique_days = sorted(df['days'].unique())
+
+    # Plot 1: ATM Volatility Time Series
+    mid_idx = data_flat.shape[1] // 2
+    plt.figure(figsize=(12, 5))
+    plt.plot(test_dates, actuals_real[:, mid_idx], label='Actual', color='black', alpha=0.6)
+    plt.plot(test_dates, preds_real[:, mid_idx], label='Predicted', color='blue', linestyle='--', alpha=0.8)
+    plt.title('Full Surface Forecast: Representative ATM Volatility')
+    plt.ylabel('Implied Volatility')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join(path_dict['plots'], 'figure5.png'), dpi=600)
+    plt.close()
+
+    # Plot 2: 3D Surface Comparison
+    target_idx = sample_idx
+    n_deltas, n_days = data.shape[1], data.shape[2]
+
+    pred_surface = preds_real[target_idx].reshape(n_deltas, n_days)
+    actual_surface = actuals_real[target_idx].reshape(n_deltas, n_days)
+    current_date = test_dates[target_idx]
+
+    X, Y = np.meshgrid(unique_days, unique_deltas)
+
+    fig = plt.figure(figsize=(14, 6))
+
+    ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+    ax1.plot_surface(X, Y, actual_surface, cmap=cm.viridis, edgecolor='none')
+    ax1.set_title(f'Actual ({current_date})')
+    ax1.set_xlabel('Maturity (Days)')
+    ax1.set_ylabel('Delta')
+    ax1.set_zlabel('Vol')
+    ax1.invert_xaxis()
+
+    ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+    ax2.plot_surface(X, Y, pred_surface, cmap=cm.coolwarm, edgecolor='none')
+    ax2.set_title(f'LSTM Forecast (t+1)')
+    ax2.set_xlabel('Maturity (Days)')
+    ax2.set_ylabel('Delta')
+    ax2.set_zlabel('Vol')
+    ax2.invert_xaxis()
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(path_dict['plots'], 'lstm_full_surface_comparison.png'), dpi=600)
+    plt.close()
+
+    return rmse_real, naive_rmse
+
+def lstm_results_latent(feature_idx=0):
+    path_dict = paths()
+
+    # Load Data & Predictor (Latent Mode)
+    data, dates = create_ivs(overwrite=False)
+    data_flat = data.reshape((data.shape[0], -1))
+
+    # train_predictor with autoencoder=True loads AE model and AE scaler automatically
+    predictor, scaler, ae_model = train_predictor(n_epochs=0, autoencoder=True, load_autoencoder=True)
+    predictor.eval()
+    ae_model.eval()
+
+    # Generate Ground Truth Latents
+    data_scaled = scaler.transform(data_flat)
+    with torch.no_grad():
+        latents_encoded = ae_model.encoder(torch.tensor(data_scaled, dtype=torch.float32)).numpy()
+
+    # Create Sequences
+    sequence_length = 5
+    X, y = create_sequences(latents_encoded, sequence_length)
+
+    split_idx = int(0.8 * len(X))
+    X_test = X[split_idx:]
+    y_test = y[split_idx:]
+    test_dates = dates[sequence_length:][split_idx:]
+
+    # Predict
+    inputs = torch.tensor(X_test, dtype=torch.float32)
+    targets = torch.tensor(y_test, dtype=torch.float32)
+
+    with torch.no_grad():
+        preds = predictor(inputs)
+
+    # Metrics
+    mse = np.mean((preds.numpy() - targets.numpy()) ** 2)
+    rmse = np.sqrt(mse)
+
+    naive_preds = targets.numpy()[:-1]
+    naive_targets = targets.numpy()[1:]
+    naive_rmse = np.sqrt(np.mean((naive_preds - naive_targets) ** 2))
+
+    # Plot Latent Time Series
+    actual_series = targets.numpy()[:, feature_idx]
+    pred_series = preds.numpy()[:, feature_idx]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(test_dates, actual_series, label='Actual Latent', color='black', alpha=0.7)
+    plt.plot(test_dates, pred_series, label='Predicted (LSTM)', color='#d62728', linestyle='--', alpha=0.9)
+
+    plt.title(f'Latent Feature #{feature_idx} Forecast (Test Set)')
+    plt.xlabel('Date')
+    plt.ylabel('Latent Value (Normalized)')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(path_dict['plots'], 'lstm_latent_results.png'), dpi=600)
+    plt.close()
+
+    return rmse, naive_rmse
+
 if __name__ == "__main__":
-    train_both_predictors(n_epochs=200)
+    rmse_full, naive_full = lstm_results_full(sample_idx=10)
+    print(f"RMSE full: {rmse_full:.4f}, Naïve RMSE: {naive_full:.4f}")
+
+    rmse_latent, naive_latent = lstm_results_latent(feature_idx=0)
+    print(f"RMSE latent: {rmse_latent:.4f}, Naïve RMSE: {naive_latent:.4f}")

@@ -163,6 +163,32 @@ The reward function is defined as the hedging error:
 The agent's objective is the minimize the MSE of the hedging error over the entire episode. The results fromt the agent's performance are presented in the next section.
 
 \section{Empirical Results}
+\subsection{Autoencoder Performance}
+The performance of the autoencoder model is evaluated based on its ability to reconstruct the original volatility surface from the compressed latent representation. The reconstruction quality is measured using Mean Squared Error (MSE) between the original and reconstructed surfaces. A side-by-side comparison of the original and reconstructed volatility surfaces is shown below:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{../Output/Plots/ae_results.png}
+    \caption{Autoencoder Reconstruction Performance}
+    \label{fig:autoencoder_performance}
+\end{figure}
+The autoencoder achieves a reconstruction MSE of 0.1060 on the test set, indicating that it effectively captures the essential features of the volatility surface in the latent representation. It can be observed that the reconstructed surface closely resembles the original, preserving key characteristics such as the volatility smile and term structure. However, some information loss is inevitable and can be seen that the reconstructed surface is smoother than the original especially in regions with high curvature.
+\subsection{Predictor Performance}
+The LSTM model's performance is evaluated based on its ability to forecast future volatility surfaces using the latent representation and the full volatility surface. The model's performance is measured using RMSE and compared against a naive baseline that assumes the volatility surface remains constant over time. A full time series plot of the predicted vs actual implied volatility for an at the money option is presented below:
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{../Output/Plots/lstm_full_timeseries.png}
+    \caption{LSTM Prediction Performance on Full Volatility Surface}
+    \label{fig:lstm_performance_full}
+\end{figure}
+This LSTM model was trained on the full volatility surface and achieved an RMSE of 0.0281 which was inferior to the naive baseline of 0.0150. The model struggled to isolate meaningful temporal patterns from the high-dimensional input data, leading to suboptimal predictions. We can observe this in the the figure above where the predicted values show a consistent lag.
+
+In contrast, the LSTM model trained on the latent representation produced by the autoencoder achieved an RMSE of 1.2110, outperforming the naive baseline of 1.235. This highlights the advantage of using a compressed representation that captures the essential features of the volatility surface while filtering out noise. 
+
+While the RMSE values are not directly comparable due to the differing feature spaces, the predictor using the latent representation demonstrates superior performance relative to its baseline, indicating that the autoencoder effectively distills relevant information for forecasting. In the next subsectionm, we will compare the hedging performance using both predictors to validate the economic value of these results.
+
+\subsection{Hedging Agent Performance}
+
+
 \section{Conclusion}
 This paper addressed two key limitations in the existing literature of deep hedging:
 1. The reliance on simulated data

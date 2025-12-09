@@ -4,13 +4,17 @@
 # import libraries
 import os
 from ivs_create import create_ivs
-from utils import paths
+from utils import paths, load_data
 from sklearn.preprocessing import StandardScaler
 import torch
 from torch.utils.data import TensorDataset, DataLoader
 import torch.nn as nn
 import torch.optim as optim
 import pickle
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 # define the autoencoder class - useful for accessing the hidden layers that will be useful for RL later
 class Autoencoder(nn.Module):
@@ -127,3 +131,81 @@ def train_autoencoder(overwrite = False, epochs = 100):
     print(f"Model saved to {models_dir}")
 
     return model, scaler
+
+
+# present the results
+def autoencoder_results(sample_idx=10):
+    path = paths()
+
+    # load data
+    data, dates = create_ivs(overwrite=False)
+    data_flat = data.reshape((data.shape[0], -1))
+    split_index = int(0.8 * data.shape[0])
+    test_data = data_flat[split_index:]
+
+    input_dim = data_flat.shape[1]
+    model = Autoencoder(input_dim=input_dim, latent_dim=32)
+    model.load_state_dict(torch.load(os.path.join(path['models'], 'autoencoder.pth')))
+    model.eval()
+
+    with open(os.path.join(path['models'], 'autoencoder_scaler.pkl'), 'rb') as f:
+        scaler = pickle.load(f)
+
+    test_tensor = torch.tensor(scaler.transform(test_data), dtype=torch.float32)
+    criterion = nn.MSELoss()
+
+    with torch.no_grad():
+        encoded, decoded = model(test_tensor)
+        mse = criterion(decoded, test_tensor).item()
+
+    target_idx = split_index + sample_idx
+    original_raw = data[target_idx]
+
+    input_vec = torch.tensor(scaler.transform(original_raw.reshape(1, -1)), dtype=torch.float32)
+    with torch.no_grad():
+        _, decoded_vec = model(input_vec)
+
+    reconstructed = scaler.inverse_transform(decoded_vec.numpy()).reshape(original_raw.shape)
+
+    # We load the raw dataframe to get the actual Days and Delta values
+    df = load_data()
+    # Apply the same filters as ivs_create.py to ensure alignment
+    df = df[(((df['delta'] < 0) & (df['cp_flag'] == "P")) |
+             ((df['delta'] > 0) & (df['cp_flag'] == "C")))]
+
+    completeness = df.groupby('date').size()
+    valid_dates = completeness[completeness == 374].index
+    df = df[df['date'].isin(valid_dates)]
+
+    unique_deltas = sorted(df['delta'].unique())
+    unique_days = sorted(df['days'].unique())
+
+    X, Y = np.meshgrid(unique_days, unique_deltas)
+
+    fig = plt.figure(figsize=(14, 6))
+
+    ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+    ax1.plot_surface(X, Y, original_raw, cmap=cm.viridis, edgecolor='none')
+    ax1.set_title(f'Original ({dates[target_idx]})')
+    ax1.set_xlabel('Maturity (Days)')
+    ax1.set_ylabel('Delta')
+    ax1.set_zlabel('Implied Volatility')
+    ax1.invert_xaxis()  # Optional: standard for surface plots to show near-term at front
+
+    ax2 = fig.add_subplot(1, 2, 2, projection='3d')
+    ax2.plot_surface(X, Y, reconstructed, cmap=cm.inferno, edgecolor='none')
+    ax2.set_title(f'Reconstructed')
+    ax2.set_xlabel('Maturity (Days)')
+    ax2.set_ylabel('Delta')
+    ax2.set_zlabel('Implied Volatility')
+    ax2.invert_xaxis()
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(path['plots'], 'figure4.png'), dpi=600)
+    plt.close()
+
+    return mse, np.sqrt(mse)
+
+if __name__ == "__main__":
+    mse, rmse = autoencoder_results(sample_idx=10)
+    print(f"MSE: {mse:.4f}, RMSE: {rmse:.4f}")
