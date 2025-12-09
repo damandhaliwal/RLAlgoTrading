@@ -13,3 +13,8 @@
 .idea
 *.csv
 *.npy
+
+one_pager.tex
+*.pth
+*.pkl
+*.png
