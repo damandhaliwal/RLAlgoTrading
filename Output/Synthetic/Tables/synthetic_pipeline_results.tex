@@ -1,0 +1,21 @@
+\begin{table}[H]
+\centering
+\caption{Pipeline Validation: End-to-End Performance on Synthetic Data}
+\label{tab:synthetic_pipeline}
+\begin{tabular}{lccccc}
+\toprule
+State Mode & Use Predictor & Is Put & Train Loss Final & Test Loss & State Dim \\
+\midrule
+latent & False & True & 3.4014 & 4.9388 & 37 \\
+latent & False & False & 3.0406 & 6.2848 & 37 \\
+latent & True & True & 1.4664 & 4.0171 & 69 \\
+latent & True & False & 4.1015 & 5.6497 & 69 \\
+full & False & True & 1.8134 & 4.7062 & 379 \\
+full & False & False & 5.1245 & 5.7731 & 379 \\
+full & True & True & 2.2938 & 8.3267 & 753 \\
+full & True & False & 6.7536 & 6.8754 & 753 \\
+hybrid & True & True & 1.9198 & 6.1425 & 411 \\
+hybrid & True & False & 6.8405 & 6.7068 & 411 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,4 +1,4 @@
-\documentclass[11pt, draft]{article}
+\documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{natbib}
@@ -210,8 +210,11 @@ To preserve realistic market structures, the corresponding implied volatility in
 Given that the agents were trained on real market data, it is unsurprising that they perform well in the bull and boom regimes where market conditions are more stable and align with historical patterns. However, their performance degrades significantly in the bear and crash scenarios, where the market experiences sharp declines and heightened volatility. This suggests that while the agents have learned effective hedging strategies for typical market conditions, they struggle to adapt to extreme downturns that may not be well-represented in the training data.
 
 To further investigate this, we conducted a second robustness check where the models were retrained entirely on synthetic data. Unlike the previous robustness check where constant volatility was assumed, this environment modeled volatility as a mean-reverting process with a negative 0.7 correlation to asset returns, capturing the leverage effect observed in real markets. Using this, we generated a 10-year synthetic dataset for the asset prices that was calibrated to match historical statistics. The synthetic implied volatility surfaces were constructed dynamically at each time step using the same approach as our real data, ensuring that the agent had access to realistic volatility information. The results from this experiment are summarized in the table below:
+\input{../Output/Synthetic/Tables/synthetic_pipeline_results.tex}
 
+The results from the end-to-end synthetic pipeline provide strong empirical support for the proposed three-stage architecture. The relay enforcement learning agent with the latent representation achieved the lowest hedging error across all configurations, outperforming the static baseline. This confirms that in a controlled environment where volatility dynamics are mathematically coupled to the price, the latent predictor does extract and transmit valuable information that is forward-looking. 
 
+Crucially, we can also observe that the reinforcement learning agent trained on the full dimensions clearly exhibited signs of overfitting, where it achieved a low training loss but the test loss was significantly higher, the worst among all the put strategies. This degradation validates our hypothesis that the curse of dimensionality thus prevents the reinforcement learning agent from making efficient decisions, and dimensionality reduction is a prerequisite for effective forecasting. By compressing the state-space, our architecture allows the agent to generalize better to unseen market conditions. 
 
 \section{Conclusion}
 This paper addressed two key limitations in the existing literature of deep hedging:
@@ -225,7 +228,11 @@ We propose a three-stage architecture comprising of:
 3. Policy learning.
 This design mirrors the decision-making process of a human trader who would have some forward-looking opinion based on historical patterns when constructing hedging strategies.
 
-The empirical results revealed several important findings. [ADD RESULTS HERE]
+The empirical results revealed several important findings. First, the autoencoder successfully compressed the 374-dimensional volatility surface into a robust latent representation. Forecasting these latent dynamics proved significantly more accurate than attempting to predict the full surface directly, which failed to beat the naive baseline. 
+
+Second, the deep hedging agents consistently outperformed the Black-Scholes Delta benchmark for put options, reducing the mean squared hedging error by approximately 46\% in the best-performing configuration. This confirms that the model can internalize volatility measures from the surface and correct for these to protect the underlying asset. However, for call options, the Black-Scholes model shows a baseline that was very difficult to surpass, probably because of the flatter volatility surface. However, our latent representation model was able to outperform it. 
+
+Contrary to our initial hypothesis, the inclusion of explicit forecasting did not consistently improve hedging performance compared to the static latent agent in the real-world data. However, when we trained the model on synthetic data and evaluated its performance on synthetic data, the inclusion of explicit forecasting did provide valuable forward-looking information. This suggests that there is volatility in the real market dynamic that is unable to be captured by our prediction model. 
 
 We'd also like to acknowledge some of the limitations of the study. The experiments focused solely on at-the-money SPY options with a 63-day horizon, leaving open the question of how these results extend to different money levels, maturities, and underlying assets. The transaction cost model, while more realistic than frictionless assumptions, remains stylized compared to actual market microstructure. Additionally, the sequential training of the three pipeline stages may leave performance gains unrealized. 
 
