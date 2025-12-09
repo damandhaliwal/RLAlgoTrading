@@ -187,6 +187,9 @@ In contrast, the LSTM model trained on the latent representation produced by the
 While the RMSE values are not directly comparable due to the differing feature spaces, the predictor using the latent representation demonstrates superior performance relative to its baseline, indicating that the autoencoder effectively distills relevant information for forecasting. In the next subsectionm, we will compare the hedging performance using both predictors to validate the economic value of these results.
 
 \subsection{Hedging Agent Performance}
+To evaluate the performance of the reinforcement learning hedging agent, we compare its hedging error against a classical delta hedging benchmark derived from the Black-Scholes-Merton model. The hedging error is calculated as the difference between the option payoff and the portfolio value at maturity, with lower values indicating better hedging performance. 
+
+We also compare the performance of agents using different state representations and predictors. The results are summarized in the table below:
 
 
 \section{Conclusion}

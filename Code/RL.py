@@ -16,6 +16,7 @@ from LSTM import train_predictor
 from ivs_create import create_ivs
 from spy_prices import get_spy_prices
 from utils import paths
+from bs_baseline import run_bs_baseline
 
 
 def bs_price(S, K, T, r, sigma, is_put=True):
@@ -596,6 +597,84 @@ def run_experiment_grid(n_epochs=50, network='RNNFNN'):
 
     return results_df
 
+# present results
+def generate_final_table(n_epochs = 100):
+    # Get Black-Scholes Baselines
+    bs_put_mse = run_bs_baseline(is_put=True)
+    bs_call_mse = run_bs_baseline(is_put=False)
+
+    baselines = {
+        'Put': bs_put_mse,
+        'Call': bs_call_mse
+    }
+
+    # This runs: Latent(NoPred), Latent(Pred), Full(NoPred), Full(Pred), Hybrid(Pred)
+    # for both Puts and Calls.
+    rl_results_df = run_experiment_grid(n_epochs = n_epochs, network = 'RNNFNN')
+
+    strategies = [
+        ('BS Delta (Baseline)', None, None),
+        ('RL-Latent (No Pred)', 'latent', False),
+        ('RL-Latent (Pred)', 'latent', True),
+        ('RL-Full (No Pred)', 'full', False),
+        ('RL-Full (Pred)', 'full', True),
+        ('RL-Hybrid (Proposed)', 'hybrid', True)
+    ]
+
+    final_rows = []
+
+    for label, mode, use_pred in strategies:
+        row_data = {'Strategy': label}
+
+        for opt_type, is_put in [('Call', False), ('Put', True)]:
+            if label == 'BS Delta (Baseline)':
+                mse = baselines[opt_type]
+            else:
+                mask = (rl_results_df['state_mode'] == mode) & \
+                       (rl_results_df['use_predictor'] == use_pred) & \
+                       (rl_results_df['is_put'] == is_put)
+
+                if mask.sum() > 0:
+                    mse = rl_results_df.loc[mask, 'test_loss'].values[0]
+                else:
+                    mse = np.nan
+
+            # Calculate Metrics
+            rmse = np.sqrt(mse)
+            bs_ref = baselines[opt_type]
+            improvement = ((bs_ref - mse) / bs_ref) * 100
+
+            # Add to row
+            row_data[f'{opt_type} MSE'] = mse
+            row_data[f'{opt_type} RMSE'] = rmse
+            row_data[f'{opt_type} Imp (%)'] = improvement
+
+        final_rows.append(row_data)
+
+    # Create DataFrame
+    final_table = pd.DataFrame(final_rows)
+
+    # Reorder columns for readability
+    cols = ['Strategy',
+            'Put MSE', 'Put RMSE', 'Put Imp (%)',
+            'Call MSE', 'Call RMSE', 'Call Imp (%)']
+    final_table = final_table[cols]
+
+    latex_code = final_table.to_latex(
+        index=False,
+        float_format="%.4f",
+        caption="Comparative Hedging Performance (MSE & RMSE) across 63-day Test Horizon",
+        label="tab:hedging_results",
+        column_format="l|rrr|rrr",  # Vertical bar separates Strategy from Data
+        position="H"
+    )
+
+    print(latex_code)
+
+    path = paths()
+    with open(os.path.join(path['tables'], 'hedging_results.tex'), 'w') as f:
+        f.write(latex_code)
+
 
 if __name__ == "__main__":
-    results = run_experiment_grid(n_epochs=100, network='RNNFNN')
+    generate_final_table(n_epochs = 100)
